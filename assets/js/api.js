@@ -7,8 +7,24 @@
 (function () {
   'use strict';
 
-  const API_BASE = 'http://localhost:5000/api';
-  const SOCKET_URL = 'http://localhost:5000';
+  const getBackendOrigin = () => {
+    if (window.GOBEYOND_API_URL) return window.GOBEYOND_API_URL.replace(/\/$/, '');
+    try {
+      const stored = localStorage.getItem('gobeyond_backend_url');
+      if (stored) return stored.replace(/\/$/, '');
+    } catch (e) {}
+
+    const isLocalhost = ['localhost', '127.0.0.1'].includes(window.location.hostname) || window.location.protocol === 'file:';
+    if (isLocalhost) {
+      return 'http://localhost:5000';
+    }
+    // Default production Render backend URL
+    return 'https://gobeyond-backend.onrender.com';
+  };
+
+  const getBackendUrl = () => `${getBackendOrigin()}/api`;
+  const API_BASE = getBackendUrl();
+  const SOCKET_URL = getBackendOrigin();
 
   const getAuthToken = () => {
     try {
@@ -228,6 +244,18 @@
         body: JSON.stringify(data)
       }),
       summarizeReviews: (destId) => apiRequest(`/ai/summarize/${destId}`)
+    },
+
+    // 13. System & Config
+    config: {
+      getBackendOrigin,
+      setBackendUrl: (url) => {
+        if (url) {
+          localStorage.setItem('gobeyond_backend_url', url);
+        } else {
+          localStorage.removeItem('gobeyond_backend_url');
+        }
+      }
     }
   };
 })();

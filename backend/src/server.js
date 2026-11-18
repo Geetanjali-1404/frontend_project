@@ -64,8 +64,8 @@ app.use('/api', apiRouter);
 app.use(errorHandler);
 
 // Start Server
-const PORT = config.port;
-server.listen(PORT, () => {
+const PORT = process.env.PORT || config.port || 5000;
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`=======================================================`);
   console.log(`   GOBEYOND TRAVELS — BACKEND API & SOCKET.IO SERVER`);
   console.log(`   URL: http://localhost:${PORT}`);
