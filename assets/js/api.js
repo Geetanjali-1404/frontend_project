@@ -19,7 +19,7 @@
       return 'http://localhost:5000';
     }
     // Default production Render backend URL
-    return 'https://gobeyond-backend.onrender.com';
+    return 'https://frontend-project-2-way8.onrender.com';
   };
 
   const getBackendUrl = () => `${getBackendOrigin()}/api`;
