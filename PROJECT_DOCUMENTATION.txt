@@ -1,0 +1,389 @@
+================================================================================
+                    GOBEYOND TRAVELS — COMPLETE PROJECT DOCUMENTATION
+                     Untold Indian Cultural & Heritage Gems Platform
+================================================================================
+Generated: November 18, 2026
+Author / Owner: Geetanjali (GitHub: Geetanjali-1404)
+Project Version: 1.0.0
+Live Frontend: https://frontend-project-six-nu.vercel.app/
+Live Backend:  https://frontend-project-2-way8.onrender.com/
+GitHub Repo:   https://github.com/Geetanjali-1404/frontend_project.git (branch: main)
+================================================================================
+
+TABLE OF CONTENTS
+-----------------
+1. PROJECT OVERVIEW & MISSION
+2. SYSTEM ARCHITECTURE & TECH STACK
+3. FRONTEND ARCHITECTURE & PAGES
+4. BACKEND ARCHITECTURE & REST API SPECIFICATION
+5. DATABASE SCHEMA & DATA MODELS (PRISMA)
+6. DEPLOYMENT & CLOUD INFRASTRUCTURE
+7. RECENT WORK & FRONTEND-BACKEND INTEGRATION DETAILS
+8. LOCAL DEVELOPMENT & SETUP GUIDE
+9. ENVIRONMENT VARIABLES & SECRETS REFERENCE
+10. VERIFICATION & HEALTH CHECK ENDPOINTS
+
+
+================================================================================
+1. PROJECT OVERVIEW & MISSION
+================================================================================
+GoBeyond Travels is a full-stack cultural travel platform designed specifically 
+for authentic, off-beat Indian heritage tourism. Unlike conventional mass-tourism 
+platforms that funnel visitors into crowded tourist traps, GoBeyond Travels 
+connects travelers directly with indigenous historians, certified native custodians, 
+and ancestral artisan guilds.
+
+Core Platform Pillars:
+- Anti-Over-Tourism: Real-time crowd density tracking indicators so conscious 
+  travelers can choose tranquil, sustainable visit windows.
+- Economic Fair Wage Charter: 85% of all booking revenue flows directly to local 
+  guides and artisan custodians, with zero-middleman commissions.
+- Cultural Depth: Focus on living oral histories, Dhokra lost-wax casting, 
+  1,000-year-old mud monasteries, Mask-making sattras, and teak mansions.
+- AI Concierge: Built-in AI travel guide assistant to curate custom itineraries 
+  and explain regional customs, road connections, and cultural etiquette.
+
+
+================================================================================
+2. SYSTEM ARCHITECTURE & TECH STACK
+================================================================================
+The project is built with a separated client-server decoupled architecture:
+
+FRONTEND:
+- Markup: Semantic HTML5 with responsive mobile-first layouts
+- Styling: Custom CSS3 with CSS Custom Properties (Variables), Flexbox, CSS Grid,
+  and smooth micro-animations (no heavy external CSS framework required)
+- Typography: Cinzel (traditional headers), Plus Jakarta Sans & Outfit (body)
+- Icons: Crisp vector Lucide-style SVG icon system and FontAwesome 6
+- Data Visualizations: Chart.js for booking breakdown and status visuals
+- Real-Time Communication: Socket.io Client for live crowd meter updates
+- Scripting: Modular ES6+ JavaScript with unified API client and fallback cache
+
+BACKEND:
+- Runtime: Node.js (v18+)
+- Framework: Express.js (REST API Server)
+- Database ORM: Prisma ORM
+- Database: PostgreSQL (hosted on Render / Supabase)
+- Real-Time Layer: Socket.io for bi-directional crowd density and notifications
+- Authentication: JSON Web Tokens (JWT) with bcryptjs password hashing and RBAC 
+  (Roles: TRAVELER, GUIDE, ADMIN)
+- File Uploads: Multer for guide government ID and avatar verification documents
+- AI Integration: API endpoints for custom itinerary generation and review summaries
+
+
+================================================================================
+3. FRONTEND ARCHITECTURE & PAGES
+================================================================================
+The frontend is structured as a multi-page web application with unified state 
+management, modal controls, and API abstraction:
+
+PAGES DIRECTORY:
+- index.html:
+  Home landing page featuring:
+  * Hero search bar with multi-criteria filters: City Hub (12 Indian hubs), 
+    Cultural Interest (Tribal, Monastic, Architecture, Craft, Spiritual), 
+    Travel Date, and Group Size.
+  * Curated Destination Cards featuring real-time crowd tags (Peaceful, Moderate).
+  * Why GoBeyond mission highlights and fair-wage badges.
+  * Testimonials from verified travelers.
+  * Floating AI Heritage Concierge button ("🧭 · AI Heritage Guide · LIVE").
+
+- destinations.html:
+  Destination explorer with interactive search and city pill filtering 
+  (Jagdalpur, Majuli, Hampi, Kaza, Karaikudi, Orchha, Nawalgarh, Varanasi, etc.).
+  Includes route planning guides, crowd filter buttons, and detail modal views.
+
+- packages.html:
+  Curated slow-travel expedition packages detailing duration, inclusions, daily 
+  itineraries, native guide assignments, and transparent cost breakdowns.
+
+- become-guide.html:
+  Local guide onboarding portal. Features fair-wage transparency calculator, 
+  custodian verification charter, and multipart application form with document upload.
+
+- reviews.html:
+  Community review platform. Displays verified traveler reviews with trust score 
+  algorithm badges, guide replies, and review submission form.
+
+- about.html:
+  Platform origins, mission against mass tourism, preservation initiatives, 
+  and ethical travel guidelines.
+
+- contact.html:
+  Direct contact channels, heritage concierge inquiries, road transfer queries, 
+  and FAQ accordion.
+
+- auth.html:
+  Dual-mode authentication portal (Sign In / Create Account) with demo login 
+  quick-fill button ("Anita Sharma"), password show/hide toggle, and remember me.
+
+- admin.html:
+  Internal platform governance portal:
+  * Real-time platform KPI cards (Active Users, Verified Guides, Gross Volume).
+  * Guide Verification Queue with document review and 1-click Approval/Rejection.
+  * Live Bookings Ledger showing 85% guide payout splits.
+
+FRONTEND JAVASCRIPT MODULES (assets/js/):
+- assets/js/api.js:
+  Unified client library (`window.GoBeyondAPI`). Manages:
+  * Dynamic backend URL discovery (localStorage -> window.GOBEYOND_API_URL -> Render URL).
+  * JWT retrieval, storage, and injection into HTTP headers.
+  * Socket.io socket initialization.
+  * Categorized API sub-namespaces: auth, destinations, guides, bookings, 
+    crowd, recommendations, routes, reviews, payments, notifications, admin, ai, config.
+- assets/js/common.js:
+  Global layout manager: handles modals (Guide profile, Route details, Booking checkout),
+  toast alerts, top navigation active indicators, and user session sync.
+- assets/js/data.js:
+  Local mock data and fallback datasets ensuring the frontend renders smoothly 
+  even when offline or when backend instances are waking from cold start.
+- assets/js/home.js: Hero search and homepage destination card renderer.
+- assets/js/destinations.js: Destination catalog search, filters, and crowd meter.
+- assets/js/packages.js: Expedition package rendering and checkout triggers.
+- assets/js/reviews.js: Review listing, ratings aggregation, and review submission.
+- assets/js/auth.js: Form validation and authentication token handling.
+- assets/js/guide-onboarding.js: Guide application form handler with file uploads.
+
+
+================================================================================
+4. BACKEND ARCHITECTURE & REST API SPECIFICATION
+================================================================================
+The Express backend is organized into a clean MVC structure:
+
+DIRECTORY LAYOUT:
+backend/
+├── prisma/
+│   ├── schema.prisma            # PostgreSQL relational schema
+│   └── seed.js                  # Database seeder with authentic Indian destinations
+├── src/
+│   ├── config/                  # App configuration & DB connection
+│   ├── controllers/             # Request handlers
+│   │   ├── adminController.js
+│   │   ├── aiController.js
+│   │   ├── authController.js
+│   │   ├── bookingController.js
+│   │   ├── crowdController.js
+│   │   ├── destinationController.js
+│   │   ├── guideController.js
+│   │   ├── notificationController.js
+│   │   ├── paymentController.js
+│   │   ├── recommendationController.js
+│   │   ├── reviewController.js
+│   │   └── routeController.js
+│   ├── middleware/              # Auth, validation, uploads, error handling
+│   ├── routes/                  # Express route definitions (src/routes/api.js)
+│   ├── services/                # Socket.io, AI service, Trust score calculation
+│   └── server.js                # Server entry point & Socket.io server
+
+CORE REST API ENDPOINTS:
+- System:
+  * GET  /api/health             - System status, timestamp, platform modules
+
+- Authentication & Users:
+  * POST /api/auth/register      - Create new traveler or guide account
+  * POST /api/auth/login         - Authenticate user & return JWT token
+  * GET  /api/auth/me            - Retrieve current authenticated profile
+
+- Destinations:
+  * GET  /api/destinations       - List all heritage destinations (supports filters)
+  * GET  /api/destinations/:id   - Detailed destination view with guides & reviews
+
+- Guides & Guilds:
+  * GET  /api/guides             - List certified local guides
+  * GET  /api/guides/:id         - Specific guide bio, badges & verified tours
+  * POST /api/guides/apply       - Guide onboarding application (multipart)
+  * PATCH /api/guides/:id/status - Admin status update (APPROVED, REJECTED, TIER)
+
+- Bookings:
+  * GET  /api/bookings           - Retrieve user bookings
+  * POST /api/bookings           - Create new booking
+  * GET  /api/bookings/:id       - Booking status & guide details
+  * POST /api/bookings/:id/cancel- Cancel booking with refund processing
+  * GET  /api/bookings/availability - Real-time slot availability check
+
+- Crowd Density Engine:
+  * GET  /api/crowd              - Global crowd levels across all destinations
+  * GET  /api/crowd/:destId      - Specific site crowd percentage & trend
+  * POST /api/crowd/report       - Guide crowd reporting endpoint
+
+- AI Engine:
+  * POST /api/ai/chat            - Interactive conversational heritage assistant
+  * POST /api/ai/itinerary       - Custom personalized itinerary generator
+  * GET  /api/ai/summarize/:id   - AI review summary for a destination
+
+- Administration:
+  * GET  /api/admin/metrics      - Platform KPIs (users, gross volume, guide share)
+  * GET  /api/admin/guides/pending - Queue of awaiting guide applications
+  * PATCH /api/admin/users/:id/block - User access moderation
+
+
+================================================================================
+5. DATABASE SCHEMA & DATA MODELS (PRISMA)
+================================================================================
+Defined in `backend/prisma/schema.prisma`:
+
+- User:
+  id, email, passwordHash, name, role (TRAVELER, GUIDE, ADMIN), phone, avatar,
+  createdAt, updatedAt.
+- GuideProfile:
+  id, userId (FK -> User), bio, city, state, experienceYears, governmentIdUrl,
+  badgeTier (NOVICE, CERTIFIED_CUSTODIAN, MASTER_HISTORIAN), verificationStatus,
+  dailyRate, languages, trustScore, totalToursCompleted.
+- Destination:
+  id, slug, name, tagline, description, city, state, region, category,
+  crowdPercent, crowdLevel (peaceful, moderate, high), heroImage, culturalTags,
+  historicalEra, latitude, longitude, bestVisitingMonths.
+- Booking:
+  id, bookingRef, userId (FK -> User), destinationId (FK -> Destination),
+  guideId (FK -> GuideProfile), startDate, endDate, groupSize, totalAmount,
+  status (PENDING, CONFIRMED, COMPLETED, CANCELLED), paymentStatus.
+- Review:
+  id, userId (FK -> User), destinationId (FK -> Destination), guideId,
+  rating (1-5), comment, trustScoreWeight, guideReply, createdAt.
+- Notification:
+  id, userId (FK -> User), title, message, type, read, createdAt.
+
+
+================================================================================
+6. DEPLOYMENT & CLOUD INFRASTRUCTURE
+================================================================================
+
+FRONTEND DEPLOYMENT (Vercel):
+- Production URL: https://frontend-project-six-nu.vercel.app/
+- Hosting Provider: Vercel Cloud Platform
+- Git Repository: https://github.com/Geetanjali-1404/frontend_project.git
+- Branch: main
+- Build Configuration:
+  * Framework Preset: Other / Static
+  * Build Command: None (Static HTML/CSS/JS)
+  * Output Directory: .
+- Reverse Proxy Configuration (`vercel.json`):
+  Proxies all `/api/:path*` traffic to the Render backend to prevent cross-origin 
+  latency and ensure seamless HTTPS edge delivery:
+  ```json
+  {
+    "framework": null,
+    "buildCommand": null,
+    "outputDirectory": ".",
+    "rewrites": [
+      {
+        "source": "/api/:path*",
+        "destination": "https://frontend-project-2-way8.onrender.com/api/:path*"
+      }
+    ]
+  }
+  ```
+
+BACKEND DEPLOYMENT (Render):
+- Production URL: https://frontend-project-2-way8.onrender.com/
+- Hosting Provider: Render Web Service (Free Tier)
+- Root Directory: backend
+- Build Command: `npm install && npx prisma generate`
+- Start Command: `npm start`
+- Host Binding: `0.0.0.0:10000` (Render PORT environment variable)
+- CORS Policy: `Access-Control-Allow-Origin: *`
+
+
+================================================================================
+7. RECENT WORK & FRONTEND-BACKEND INTEGRATION DETAILS
+================================================================================
+Summary of Latest Engineering Tasks Completed:
+
+1. Deployment Discovery & Diagnosis:
+   - Evaluated live Vercel frontend: https://frontend-project-six-nu.vercel.app/
+   - Evaluated live Render backend: https://frontend-project-2-way8.onrender.com/
+   - Detected that the frontend was previously defaulting to an inactive host:
+     `https://gobeyond-backend.onrender.com`.
+   - Identified that public HTML files lacked `<script src="assets/js/api.js"></script>`.
+
+2. Codebase Rectification:
+   - Updated `assets/js/api.js`:
+     Changed the production backend fallback origin to:
+     `https://frontend-project-2-way8.onrender.com`
+   - Configured `vercel.json`:
+     Added clean rewrites rule to route `/api/:path*` directly to the Render endpoint.
+   - HTML Integration:
+     Embedded `assets/js/api.js` in all customer-facing pages:
+     `index.html`, `auth.html`, `destinations.html`, `packages.html`,
+     `become-guide.html`, `reviews.html`, `contact.html`, and `about.html`.
+
+3. Version Control & Synchronization:
+   - Created tracking branch linked directly to `frontend_project.git` (main).
+   - Committed changes: Commit `ac83c4f`
+     ("Connect frontend to Render backend at frontend-project-2-way8.onrender.com").
+   - Pushed directly to `https://github.com/Geetanjali-1404/frontend_project.git` on branch `main`.
+   - Validated that Vercel auto-built and deployed the live update.
+   - Tested live endpoint [https://frontend-project-six-nu.vercel.app/assets/js/api.js](https://frontend-project-six-nu.vercel.app/assets/js/api.js)
+     and confirmed the active Render URL is deployed and operational.
+
+
+================================================================================
+8. LOCAL DEVELOPMENT & SETUP GUIDE
+================================================================================
+
+To run the full stack locally on your computer:
+
+A. Clone the Repository:
+   git clone https://github.com/Geetanjali-1404/frontend_project.git
+   cd frontend_project
+
+B. Run Backend:
+   cd backend
+   npm install
+   npx prisma generate
+   # Ensure .env exists with PORT=5000 and DATABASE_URL
+   npm run dev
+   # Backend runs at http://localhost:5000
+
+C. Run Frontend:
+   # In the root project directory:
+   python -m http.server 3000
+   # Open browser at http://localhost:3000
+
+D. Instant Backend URL Switching:
+   You can point your frontend to any backend anytime using the browser console:
+   localStorage.setItem('gobeyond_backend_url', 'https://frontend-project-2-way8.onrender.com');
+   location.reload();
+
+
+================================================================================
+9. ENVIRONMENT VARIABLES & SECRETS REFERENCE
+================================================================================
+
+Backend Environment Variables (backend/.env or Render Dashboard):
+- PORT=10000 (Render default) or 5000 (Local)
+- NODE_ENV=production
+- DATABASE_URL=postgresql://<user>:<password>@<host>:<port>/<dbname>
+- JWT_SECRET=<secure_random_jwt_secret_key>
+- JWT_EXPIRES_IN=7d
+- CLIENT_ORIGIN=* (or https://frontend-project-six-nu.vercel.app)
+
+Frontend Environment Variables:
+- Handled dynamically via `window.GOBEYOND_API_URL` or `vercel.json` rewrites.
+
+
+================================================================================
+10. VERIFICATION & HEALTH CHECK ENDPOINTS
+================================================================================
+You can verify the entire deployment health at any time:
+
+1. Backend Health Check:
+   curl https://frontend-project-2-way8.onrender.com/api/health
+   Response: 200 OK JSON with "status": "online"
+
+2. Destinations API:
+   curl https://frontend-project-2-way8.onrender.com/api/destinations
+   Response: 200 OK JSON with 6 curated Indian heritage sites
+
+3. Guides API:
+   curl https://frontend-project-2-way8.onrender.com/api/guides
+   Response: 200 OK JSON with verified native guides
+
+4. Frontend Live Verification:
+   https://frontend-project-six-nu.vercel.app/
+   Open DevTools Console (F12) and type:
+   window.GoBeyondAPI.destinations.getAll().then(console.log);
+
+================================================================================
+                       END OF PROJECT DOCUMENTATION
+================================================================================
