@@ -27,3 +27,9 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# Database & Uploads
+*.db
+*.sqlite
+backend/uploads/
+.vercel

@@ -23,6 +23,18 @@
 
   // --- Initialize Global Containers for Modals & Toasts ---
   function ensureContainers() {
+    if (!window.io && !document.getElementById('socket-io-script')) {
+      const s = document.createElement('script');
+      s.id = 'socket-io-script';
+      s.src = 'https://cdn.socket.io/4.8.1/socket.io.min.js';
+      document.head.appendChild(s);
+    }
+    if (!window.GoBeyondAPI && !document.getElementById('gobeyond-api-script')) {
+      const s = document.createElement('script');
+      s.id = 'gobeyond-api-script';
+      s.src = 'assets/js/api.js';
+      document.head.appendChild(s);
+    }
     if (!document.getElementById('modal-root')) {
       const modalRoot = document.createElement('div');
       modalRoot.id = 'modal-root';
@@ -79,6 +91,7 @@
 
   function setCurrentUser(user) {
     if (user) {
+      const adminBadge = user.role === 'ADMIN' ? '<a href="admin.html" class="btn btn-outline btn-sm" style="margin-right:8px; border-color:var(--terracotta); color:var(--terracotta); font-weight:700;">🛡️ Admin Portal</a>' : '';
       localStorage.setItem('gobeyond_user', JSON.stringify(user));
     } else {
       localStorage.removeItem('gobeyond_user');
@@ -95,7 +108,7 @@
     if (!authBtn) return;
 
     if (user) {
-      authBtn.innerHTML = `
+      authBtn.innerHTML = adminBadge + `
         <span style="display:inline-flex; align-items:center; gap:8px;">
           <img src="${user.avatar || 'assets/images/travelers/traveler-anita.jpg'}" style="width:26px; height:26px; border-radius:50%; object-fit:cover; border:1px solid #fff;" alt="avatar" />
           <span>${user.name.split(' ')[0]}</span>
@@ -731,6 +744,22 @@
       modalRoot.querySelector('#btn-confirm-pay').onclick = () => {
         const btn = modalRoot.querySelector('#btn-confirm-pay');
         btn.innerHTML = `<span style="display:inline-block; animation:spin 1s infinite linear;">⏳</span> Verifying Payment...`;
+        if (window.GoBeyondAPI) {
+          const destId = (item && (item.destinationId || item.id)) || 'bastar-tribal-crafts';
+          window.GoBeyondAPI.bookings.create({
+            destinationId: destId,
+            guideId: item.guideId,
+            startDate: selectedDate || new Date().toISOString(),
+            guests: travelers
+          }).then(res => {
+            if (res && res.data) {
+              window.GoBeyondAPI.payments.verify({
+                bookingId: res.data.id,
+                paymentMethod: 'UPI'
+              }).catch(e => console.warn('Payment verify err:', e));
+            }
+          }).catch(e => console.warn('Booking create err:', e));
+        }
         btn.disabled = true;
 
         setTimeout(() => {
@@ -982,6 +1011,9 @@
   // --- Initialize on DOM Loaded ---
   document.addEventListener('DOMContentLoaded', () => {
     initNavigation();
+    ensureContainers();
+    initAIAssistantWidget();
+    initSocketCrowdListener();
   });
 
   // In-Memory Dynamic Canvas Image Generator for 100% Guaranteed Image Rendering
@@ -1108,6 +1140,264 @@
   }, true);
 
   // --- Export Global Methods ---
+  
+  // --- AI Travel Assistant Floating Widget (Module 12) ---
+  function initAIAssistantWidget() {
+    if (document.getElementById('gobeyond-ai-fab')) return;
+
+    const fab = document.createElement('div');
+    fab.id = 'gobeyond-ai-fab';
+    fab.innerHTML = `
+      <div id="ai-fab-btn" style="position:fixed; bottom:24px; right:24px; z-index:9999; cursor:pointer; background:linear-gradient(135deg, #D9534F, #C27D38); color:#fff; padding:12px 20px; border-radius:999px; box-shadow:0 8px 24px rgba(217,83,79,0.38); display:flex; align-items:center; gap:10px; font-weight:700; font-size:0.88rem; transition:transform 0.2s; user-select:none;">
+        <span style="font-size:1.3rem;">🧭</span>
+        <span>AI Heritage Guide</span>
+        <span style="background:rgba(255,255,255,0.25); padding:2px 8px; border-radius:999px; font-size:0.68rem; font-weight:800;">LIVE</span>
+      </div>
+
+      <div id="ai-drawer" style="display:none; position:fixed; bottom:86px; right:24px; width:390px; max-width:calc(100vw - 32px); height:540px; max-height:calc(100vh - 120px); background:#FAF9F6; border:1px solid var(--border-light); border-radius:var(--radius-lg); box-shadow:0 16px 40px rgba(0,0,0,0.22); z-index:9999; flex-direction:column; overflow:hidden;">
+        
+        <!-- Header -->
+        <div style="background:var(--charcoal); color:#fff; padding:16px 20px; display:flex; justify-content:space-between; align-items:center;">
+          <div style="display:flex; align-items:center; gap:8px;">
+            <span style="font-size:1.2rem;">🧭</span>
+            <div>
+              <strong style="display:block; font-size:0.95rem; font-family:var(--font-accent);">GoBeyond AI Assistant</strong>
+              <span style="font-size:0.72rem; color:var(--warm-sand);">Conscious Heritage Explorer Engine</span>
+            </div>
+          </div>
+          <button id="btn-close-ai" style="background:none; border:none; color:#fff; font-size:1.3rem; cursor:pointer; line-height:1;">&times;</button>
+        </div>
+
+        <!-- Navigation Tabs -->
+        <div style="display:flex; border-bottom:1px solid var(--border-light); background:#fff;">
+          <button id="tab-ai-chat" class="ai-tab active" style="flex:1; padding:10px; border:none; background:none; font-weight:700; font-size:0.8rem; cursor:pointer; border-bottom:2px solid var(--terracotta); color:var(--terracotta);">💬 Ask AI</button>
+          <button id="tab-ai-itin" class="ai-tab" style="flex:1; padding:10px; border:none; background:none; font-weight:700; font-size:0.8rem; cursor:pointer; color:var(--slate);">🗺️ Itinerary</button>
+          <button id="tab-ai-rev" class="ai-tab" style="flex:1; padding:10px; border:none; background:none; font-weight:700; font-size:0.8rem; cursor:pointer; color:var(--slate);">📊 Reviews</button>
+        </div>
+
+        <!-- Tab 1: Chat Pane -->
+        <div id="pane-ai-chat" style="flex:1; display:flex; flex-direction:column; overflow:hidden; padding:14px;">
+          <div id="ai-chat-messages" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px; padding-right:4px; font-size:0.86rem;">
+            <div style="background:#fff; border:1px solid var(--border-light); padding:10px 14px; border-radius:12px; color:var(--charcoal); line-height:1.5;">
+              Namaste! 🙏 I am your <strong>GoBeyond AI Travel Guide</strong>. Ask me for hidden heritage spots under a budget, authentic tribal crafts, or low-crowd escapes.
+            </div>
+          </div>
+
+          <!-- Quick Suggestion Pills -->
+          <div style="display:flex; gap:6px; overflow-x:auto; padding:8px 0; font-size:0.72rem;">
+            <span class="ai-pill" style="cursor:pointer; background:var(--warm-sand); padding:4px 8px; border-radius:999px; white-space:nowrap; border:1px solid var(--border-light);">Near Delhi under ₹3000</span>
+            <span class="ai-pill" style="cursor:pointer; background:var(--warm-sand); padding:4px 8px; border-radius:999px; white-space:nowrap; border:1px solid var(--border-light);">Dhokra metal craft</span>
+            <span class="ai-pill" style="cursor:pointer; background:var(--warm-sand); padding:4px 8px; border-radius:999px; white-space:nowrap; border:1px solid var(--border-light);">Zero crowd spots</span>
+          </div>
+
+          <div style="display:flex; gap:8px; margin-top:6px;">
+            <input type="text" id="ai-input-msg" placeholder="Ask about hidden gems, budget, guides..." style="flex:1; padding:8px 12px; border-radius:var(--radius-sm); border:1px solid var(--border-light); font-size:0.84rem; outline:none;" />
+            <button id="btn-send-ai" class="btn btn-primary btn-sm" style="padding:8px 14px;">Send</button>
+          </div>
+        </div>
+
+        <!-- Tab 2: Itinerary Generator Pane -->
+        <div id="pane-ai-itin" style="flex:1; display:none; flex-direction:column; overflow-y:auto; padding:16px; font-size:0.86rem;">
+          <div style="margin-bottom:12px;">
+            <label style="display:block; font-weight:700; font-size:0.78rem; margin-bottom:4px;">Destination</label>
+            <input type="text" id="itin-dest" class="form-control" value="Bastar Tribal Heritage" style="font-size:0.85rem; padding:8px;" />
+          </div>
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:12px;">
+            <div>
+              <label style="display:block; font-weight:700; font-size:0.78rem; margin-bottom:4px;">Budget (₹)</label>
+              <input type="number" id="itin-budget" class="form-control" value="3500" style="font-size:0.85rem; padding:8px;" />
+            </div>
+            <div>
+              <label style="display:block; font-weight:700; font-size:0.78rem; margin-bottom:4px;">Duration</label>
+              <select id="itin-duration" class="form-control" style="font-size:0.85rem; padding:8px;">
+                <option value="2 Days">2 Days</option>
+                <option value="3 Days" selected>3 Days</option>
+                <option value="5 Days">5 Days</option>
+              </select>
+            </div>
+          </div>
+          <button id="btn-gen-itin" class="btn btn-primary btn-sm" style="width:100%; margin-bottom:12px;">✨ Generate AI Itinerary</button>
+          <div id="itin-result-box" style="background:#fff; border:1px solid var(--border-light); border-radius:8px; padding:12px; font-size:0.82rem; line-height:1.5;">
+            Click Generate to craft a tailored day-by-day expedition plan.
+          </div>
+        </div>
+
+        <!-- Tab 3: Reviews AI Summarizer Pane -->
+        <div id="pane-ai-rev" style="flex:1; display:none; flex-direction:column; overflow-y:auto; padding:16px; font-size:0.86rem;">
+          <label style="display:block; font-weight:700; font-size:0.78rem; margin-bottom:4px;">Select Gem to Summarize</label>
+          <select id="ai-rev-dest" class="form-control" style="font-size:0.85rem; padding:8px; margin-bottom:12px;">
+            <option value="bastar-tribal-crafts">Bastar Tribal Heritage</option>
+            <option value="majuli-river-satras">Majuli Island Satras</option>
+            <option value="hampi-anegundi-boulders">Hampi / Anegundi Boulders</option>
+            <option value="chettinad-mansions-culinary">Chettinad Heritage Mansions</option>
+          </select>
+          <button id="btn-summarize-rev" class="btn btn-primary btn-sm" style="width:100%; margin-bottom:12px;">📊 Summarize Reviews</button>
+          <div id="ai-rev-summary-box" style="background:#fff; border:1px solid var(--border-light); border-radius:8px; padding:12px; font-size:0.82rem; line-height:1.5;">
+            Click Summarize to synthesize hundreds of reviews into Pros & Cons.
+          </div>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(fab);
+
+    // Toggle drawer
+    const btnFab = document.getElementById('ai-fab-btn');
+    const drawer = document.getElementById('ai-drawer');
+    const btnClose = document.getElementById('btn-close-ai');
+
+    btnFab.onclick = () => drawer.style.display = drawer.style.display === 'none' ? 'flex' : 'none';
+    btnClose.onclick = () => drawer.style.display = 'none';
+
+    // Tabs switching
+    const tabChat = document.getElementById('tab-ai-chat');
+    const tabItin = document.getElementById('tab-ai-itin');
+    const tabRev = document.getElementById('tab-ai-rev');
+    const paneChat = document.getElementById('pane-ai-chat');
+    const paneItin = document.getElementById('pane-ai-itin');
+    const paneRev = document.getElementById('pane-ai-rev');
+
+    function switchAiTab(tab) {
+      [tabChat, tabItin, tabRev].forEach(t => {
+        t.style.borderBottom = 'none';
+        t.style.color = 'var(--slate)';
+      });
+      [paneChat, paneItin, paneRev].forEach(p => p.style.display = 'none');
+
+      if (tab === 'chat') {
+        tabChat.style.borderBottom = '2px solid var(--terracotta)';
+        tabChat.style.color = 'var(--terracotta)';
+        paneChat.style.display = 'flex';
+      } else if (tab === 'itin') {
+        tabItin.style.borderBottom = '2px solid var(--terracotta)';
+        tabItin.style.color = 'var(--terracotta)';
+        paneItin.style.display = 'flex';
+      } else if (tab === 'rev') {
+        tabRev.style.borderBottom = '2px solid var(--terracotta)';
+        tabRev.style.color = 'var(--terracotta)';
+        paneRev.style.display = 'flex';
+      }
+    }
+
+    tabChat.onclick = () => switchAiTab('chat');
+    tabItin.onclick = () => switchAiTab('itin');
+    tabRev.onclick = () => switchAiTab('rev');
+
+    // Chat functionality
+    const msgBox = document.getElementById('ai-chat-messages');
+    const inputMsg = document.getElementById('ai-input-msg');
+    const btnSend = document.getElementById('btn-send-ai');
+
+    async function sendChat(text) {
+      const q = text || inputMsg.value.trim();
+      if (!q) return;
+      inputMsg.value = '';
+
+      msgBox.innerHTML += `<div style="align-self:flex-end; background:var(--terracotta); color:#fff; padding:8px 12px; border-radius:12px; max-width:85%; word-break:break-word;">${q}</div>`;
+      msgBox.scrollTop = msgBox.scrollHeight;
+
+      const loadingDiv = document.createElement('div');
+      loadingDiv.style.alignSelf = 'flex-start';
+      loadingDiv.style.background = '#fff';
+      loadingDiv.style.border = '1px solid var(--border-light)';
+      loadingDiv.style.padding = '8px 12px';
+      loadingDiv.style.borderRadius = '12px';
+      loadingDiv.textContent = 'Thinking... ⏳';
+      msgBox.appendChild(loadingDiv);
+      msgBox.scrollTop = msgBox.scrollHeight;
+
+      try {
+        let answer = '';
+        if (window.GoBeyondAPI) {
+          const res = await window.GoBeyondAPI.ai.chat(q);
+          answer = res.data?.answer || 'Heritage recommendation ready.';
+        } else {
+          answer = 'Heritage recommendation: Visit Bastar for lost-wax Dhokra artisans or Shekhawati for frescoed havelis.';
+        }
+        loadingDiv.innerHTML = answer.replace(/\n/g, '<br/>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      } catch (e) {
+        loadingDiv.textContent = 'Error contacting AI: ' + e.message;
+      }
+      msgBox.scrollTop = msgBox.scrollHeight;
+    }
+
+    btnSend.onclick = () => sendChat();
+    inputMsg.onkeydown = (e) => { if (e.key === 'Enter') sendChat(); };
+
+    document.querySelectorAll('.ai-pill').forEach(pill => {
+      pill.onclick = () => sendChat(pill.textContent);
+    });
+
+    // Itinerary generation
+    document.getElementById('btn-gen-itin').onclick = async () => {
+      const dest = document.getElementById('itin-dest').value;
+      const budget = document.getElementById('itin-budget').value;
+      const duration = document.getElementById('itin-duration').value;
+      const resBox = document.getElementById('itin-result-box');
+      resBox.innerHTML = 'Crafting your heritage itinerary... ⏳';
+
+      try {
+        if (window.GoBeyondAPI) {
+          const res = await window.GoBeyondAPI.ai.generateItinerary({ destinationName: dest, budget, duration });
+          const itin = res.data;
+          resBox.innerHTML = `
+            <h4 style="margin-top:0; color:var(--terracotta); font-family:var(--font-accent);">${itin.destination}</h4>
+            <div style="font-size:0.75rem; color:var(--muted); margin-bottom:8px;">${itin.duration} • Budget ${itin.budgetCategory}</div>
+            ${itin.days.map(d => `
+              <div style="margin-bottom:8px; border-top:1px solid #eee; padding-top:6px;">
+                <strong style="color:var(--charcoal); display:block;">Day ${d.day}: ${d.title}</strong>
+                <p style="margin:4px 0; font-size:0.78rem;">🌅 <strong>Morning:</strong> ${d.morning}</p>
+                <p style="margin:4px 0; font-size:0.78rem;">☀️ <strong>Afternoon:</strong> ${d.afternoon}</p>
+                <p style="margin:4px 0; font-size:0.78rem;">🌙 <strong>Evening:</strong> ${d.evening}</p>
+              </div>
+            `).join('')}
+          `;
+        }
+      } catch(e) {
+        resBox.innerHTML = 'Error: ' + e.message;
+      }
+    };
+
+    // Review summarization
+    document.getElementById('btn-summarize-rev').onclick = async () => {
+      const destId = document.getElementById('ai-rev-dest').value;
+      const box = document.getElementById('ai-rev-summary-box');
+      box.innerHTML = 'Synthesizing traveler reviews... ⏳';
+
+      try {
+        if (window.GoBeyondAPI) {
+          const res = await window.GoBeyondAPI.ai.summarizeReviews(destId);
+          const s = res.data;
+          box.innerHTML = `
+            <div style="margin-bottom:8px; font-weight:700; color:#059669;">✓ ${s.overallSentiment}</div>
+            <strong style="color:var(--teal);">Pros:</strong>
+            <ul style="margin:4px 0 8px 16px; padding:0;">
+              ${s.pros.map(p => `<li>${p}</li>`).join('')}
+            </ul>
+            <strong style="color:var(--terracotta);">Cons:</strong>
+            <ul style="margin:4px 0 0 16px; padding:0;">
+              ${s.cons.map(c => `<li>${c}</li>`).join('')}
+            </ul>
+          `;
+        }
+      } catch(e) {
+        box.innerHTML = 'Error: ' + e.message;
+      }
+    };
+  }
+
+  // --- Real-Time Socket.io Crowd Listener ---
+  function initSocketCrowdListener() {
+    if (window.GoBeyondAPI) {
+      window.GoBeyondAPI.crowd.onUpdate((data) => {
+        console.log('[Socket.io] Real-time crowd broadcast received:', data);
+        if (window.GoBeyond) {
+          window.GoBeyond.showToast(`📡 Live Crowd Alert: ${data.destinationId} density is now ${data.crowdPercent}% (${data.crowdLevel})`, 'info');
+        }
+      });
+    }
+  }
+
   window.GoBeyond = {
     openGuideModal,
     openRouteGuide,

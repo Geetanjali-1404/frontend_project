@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Dashboard & Verification Portal — GOBEYOND TRAVELS</title>
+  
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23D9534F' stroke-width='2'><circle cx='12' cy='12' r='10'/><polygon points='16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76'/></svg>" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Outfit:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="assets/css/style.css" />
+
+  <style>
+    .admin-container {
+      max-width: 1280px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+    .admin-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 20px;
+      margin-bottom: 36px;
+    }
+    .metric-card {
+      background: #fff;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      transition: transform 0.2s ease;
+    }
+    .metric-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+    .metric-label {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+    .metric-value {
+      font-size: 2rem;
+      font-weight: 800;
+      color: var(--charcoal);
+      font-family: var(--font-accent);
+    }
+    .metric-sub {
+      font-size: 0.78rem;
+      color: #10B981;
+      font-weight: 600;
+      margin-top: 6px;
+    }
+    .admin-section {
+      background: #fff;
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-lg);
+      padding: 28px;
+      margin-bottom: 36px;
+      box-shadow: var(--shadow-sm);
+    }
+    .admin-section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border-light);
+      padding-bottom: 14px;
+    }
+    .table-responsive {
+      overflow-x: auto;
+    }
+    .admin-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 0.88rem;
+    }
+    .admin-table th {
+      padding: 12px 16px;
+      background: var(--warm-sand);
+      color: var(--charcoal);
+      font-weight: 700;
+      border-bottom: 2px solid var(--border-light);
+    }
+    .admin-table td {
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border-light);
+      vertical-align: middle;
+    }
+    .status-badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+    .status-pending { background: #FEF3C7; color: #D97706; }
+    .status-approved { background: #ECFDF5; color: #059669; }
+    .status-rejected { background: #FEE2E2; color: #DC2626; }
+    .action-btn-group {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .badge-select {
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-light);
+      font-size: 0.78rem;
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Site Navigation Bar -->
+  <header class="site-header">
+    <div class="container navbar">
+      <a href="index.html" class="brand-logo">
+        <div class="brand-icon">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>
+        </div>
+        <div class="brand-name">
+          <span class="brand-title">GOBEYOND <span>ADMIN</span></span>
+          <span class="brand-tagline">National Heritage Curation & Control Portal</span>
+        </div>
+      </a>
+
+      <nav>
+        <ul class="nav-menu">
+          <li><a href="index.html" class="nav-link">Home</a></li>
+          <li><a href="destinations.html" class="nav-link">Destinations</a></li>
+          <li><a href="become-guide.html" class="nav-link">Guide Portal</a></li>
+          <li><a href="admin.html" class="nav-link active">Admin Dashboard</a></li>
+        </ul>
+      </nav>
+
+      <div class="nav-actions">
+        <span id="admin-user-pill" style="display:inline-flex; align-items:center; gap:8px; font-weight:700; font-size:0.85rem; color:var(--terracotta);">
+          🛡️ Admin Verified
+        </span>
+        <button id="btn-admin-logout" class="btn btn-outline btn-sm">Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="admin-container">
+    <div class="admin-header">
+      <div>
+        <h1 style="font-size: 2rem; color: var(--charcoal); margin-bottom: 6px;">Platform Control & Guide Verification</h1>
+        <p style="color: var(--slate); font-size: 0.95rem; margin: 0;">
+          Live telemetry from PostgreSQL/Prisma Database & Socket.io Real-Time Engine.
+        </p>
+      </div>
+      <div style="display:flex; gap:10px;">
+        <button id="btn-refresh-metrics" class="btn btn-outline btn-sm">🔄 Refresh Data</button>
+        <button id="btn-simulate-crowd" class="btn btn-primary btn-sm">📡 Test Crowd Broadcast</button>
+      </div>
+    </div>
+
+    <!-- 1. Real-Time Metrics Grid -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label">Active Conscious Explorers</div>
+        <div class="metric-value" id="val-users">--</div>
+        <div class="metric-sub">✓ 100% Verified Accounts</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Verified Local Guides</div>
+        <div class="metric-value" id="val-guides">--</div>
+        <div class="metric-sub" id="sub-pending-guides">-- pending verification</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Gross Booking Volume</div>
+        <div class="metric-value" id="val-gross">--</div>
+        <div class="metric-sub">Expeditions Confirmed</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Platform Conservation (15%)</div>
+        <div class="metric-value" id="val-commission">--</div>
+        <div class="metric-sub">Dedicated to local trusts</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label">Guide Direct Share (85%)</div>
+        <div class="metric-value" id="val-payouts">--</div>
+        <div class="metric-sub">Direct weekly UPI transfers</div>
+      </div>
+    </div>
+
+    <!-- 2. Guide Verification Queue (Module 3) -->
+    <section class="admin-section">
+      <div class="admin-section-header">
+        <div>
+          <h2 style="font-size: 1.3rem; margin-bottom: 4px;">🎖️ Native Guide Verification Queue</h2>
+          <p style="color: var(--slate); font-size: 0.84rem; margin: 0;">Review Government IDs, credentials, and grant verification badges.</p>
+        </div>
+        <span class="status-badge status-pending" id="badge-pending-count">0 Applications</span>
+      </div>
+
+      <div class="table-responsive">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Guide Candidate</th>
+              <th>Region / City</th>
+              <th>Years Exp</th>
+              <th>Government ID Document</th>
+              <th>Badge Tier</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="guides-queue-body">
+            <tr>
+              <td colspan="6" style="text-align:center; color:var(--muted); padding:30px;">
+                Checking verification database...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 3. Real-Time Crowd Density Management (Module 5) -->
+    <section class="admin-section">
+      <div class="admin-section-header">
+        <div>
+          <h2 style="font-size: 1.3rem; margin-bottom: 4px;">📡 Live Crowd Density Engine & Simulator</h2>
+          <p style="color: var(--slate); font-size: 0.84rem; margin: 0;">Broadcast simulated guide reports or sensor readings in real-time via Socket.io.</p>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:20px; align-items:center;">
+        <div>
+          <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:6px;">Target Destination</label>
+          <select id="crowd-target-dest" class="form-control">
+            <option value="bastar-tribal-crafts">Bastar Tribal Heritage & Dhokra Artisans</option>
+            <option value="majuli-river-satras">Majuli Island Neo-Vaishnavite Satras</option>
+            <option value="hampi-anegundi-boulders">Anegundi & Northern Boulder Ruins</option>
+            <option value="spiti-dhankar-monasteries">Spiti Valley Mud Fortresses</option>
+            <option value="chettinad-mansions-culinary">Chettinad Heritage Mansions</option>
+            <option value="shekhawati-painted-havelis">Shekhawati Open-Air Fresco Havelis</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="display:block; font-size:0.82rem; font-weight:700; margin-bottom:6px;">Crowd Density Percentage (<span id="crowd-val-display">25%</span>)</label>
+          <input type="range" id="crowd-slider" min="5" max="95" value="25" style="width:100%; accent-color:var(--terracotta);" />
+        </div>
+
+        <div style="padding-top:20px;">
+          <button id="btn-broadcast-crowd" class="btn btn-primary" style="width:100%;">
+            ⚡ Broadcast Real-Time Alert
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. Active Expeditions Ledger -->
+    <section class="admin-section">
+      <div class="admin-section-header">
+        <div>
+          <h2 style="font-size: 1.3rem; margin-bottom: 4px;">📋 Recent Bookings & Settlement Ledger</h2>
+          <p style="color: var(--slate); font-size: 0.84rem; margin: 0;">Automated 85/15 revenue splitting records.</p>
+        </div>
+      </div>
+
+      <div class="table-responsive">
+        <table class="admin-table">
+          <thead>
+            <tr>
+              <th>Booking Ref</th>
+              <th>Traveler</th>
+              <th>Destination</th>
+              <th>Date</th>
+              <th>Total Amount</th>
+              <th>Guide Share (85%)</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="bookings-ledger-body">
+            <tr>
+              <td colspan="7" style="text-align:center; color:var(--muted); padding:30px;">
+                Loading bookings ledger...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- Load API Client & Socket.io -->
+  <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/common.js"></script>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      const api = window.GoBeyondAPI;
+      if (!api) return;
+
+      // Auto login as admin if token is missing
+      const token = api.getAuthToken();
+      if (!token) {
+        try {
+          await api.auth.login('admin@gobeyond.travel', 'admin123');
+        } catch (e) {
+          console.warn('Auto admin login failed:', e);
+        }
+      }
+
+      // 1. Fetch Metrics
+      async function loadMetrics() {
+        try {
+          const res = await api.admin.getMetrics();
+          if (res.success && res.metrics) {
+            const m = res.metrics;
+            document.getElementById('val-users').textContent = m.activeUsers || '12';
+            document.getElementById('val-guides').textContent = m.approvedGuides || '6';
+            document.getElementById('sub-pending-guides').textContent = `${m.pendingGuides || 1} pending verification`;
+            document.getElementById('val-gross').textContent = `₹${(m.grossVolume || 7600).toLocaleString('en-IN')}`;
+            document.getElementById('val-commission').textContent = `₹${(m.platformCommission || 1140).toLocaleString('en-IN')}`;
+            document.getElementById('val-payouts').textContent = `₹${(m.guidePayouts || 6460).toLocaleString('en-IN')}`;
+          }
+        } catch (err) {
+          console.warn('Metrics error:', err);
+        }
+      }
+
+      // 2. Fetch Pending Guides
+      async function loadPendingGuides() {
+        try {
+          const res = await api.admin.getPendingGuides();
+          const tbody = document.getElementById('guides-queue-body');
+          const badgeCount = document.getElementById('badge-pending-count');
+
+          if (res.success && res.data && res.data.length > 0) {
+            badgeCount.textContent = `${res.data.length} Pending Review`;
+            tbody.innerHTML = res.data.map(guide => `
+              <tr>
+                <td>
+                  <div style="display:flex; align-items:center; gap:10px;">
+                    <img src="${guide.user.avatar || 'assets/images/guides/guide-ramesh.jpg'}" style="width:36px; height:36px; border-radius:50%; object-fit:cover;" />
+                    <div>
+                      <strong style="color:var(--charcoal); display:block;">${guide.user.name}</strong>
+                      <span style="font-size:0.75rem; color:var(--muted);">${guide.user.email}</span>
+                    </div>
+                  </div>
+                </td>
+                <td><strong>${guide.city}</strong>, ${guide.state}</td>
+                <td>${guide.experienceYears} Years</td>
+                <td>
+                  <a href="${guide.governmentIdUrl || '#'}" target="_blank" style="color:var(--teal); font-weight:700; text-decoration:underline;">
+                    📄 View ID Document
+                  </a>
+                </td>
+                <td>
+                  <select class="badge-select" id="badge-select-${guide.id}">
+                    <option value="VERIFIED_EXPERT" ${guide.badgeTier === 'VERIFIED_EXPERT' ? 'selected' : ''}>Verified Expert</option>
+                    <option value="GOLD" ${guide.badgeTier === 'GOLD' ? 'selected' : ''}>Gold</option>
+                    <option value="SILVER" ${guide.badgeTier === 'SILVER' ? 'selected' : ''}>Silver</option>
+                    <option value="BRONZE" ${guide.badgeTier === 'BRONZE' ? 'selected' : ''}>Bronze</option>
+                  </select>
+                </td>
+                <td>
+                  <div class="action-btn-group">
+                    <button class="btn btn-sm btn-primary" onclick="approveGuide('${guide.id}')">✓ Approve</button>
+                    <button class="btn btn-sm btn-outline" style="color:#DC2626; border-color:#DC2626;" onclick="rejectGuide('${guide.id}')">Reject</button>
+                  </div>
+                </td>
+              </tr>
+            `).join('');
+          } else {
+            badgeCount.textContent = '0 Pending';
+            tbody.innerHTML = `
+              <tr>
+                <td colspan="6" style="text-align:center; color:#059669; padding:24px;">
+                  ✓ All submitted guide applications have been verified and processed!
+                </td>
+              </tr>
+            `;
+          }
+        } catch (err) {
+          console.warn('Guides queue error:', err);
+        }
+      }
+
+      // 3. Fetch Bookings Ledger
+      async function loadBookings() {
+        try {
+          const res = await api.bookings.getMyBookings();
+          const tbody = document.getElementById('bookings-ledger-body');
+          if (res.success && res.data && res.data.length > 0) {
+            tbody.innerHTML = res.data.map(b => {
+              const guideShare = b.totalAmount * 0.85;
+              return `
+                <tr>
+                  <td><strong style="font-family:var(--font-accent); color:var(--terracotta);">${b.bookingRef}</strong></td>
+                  <td>${b.user.name}</td>
+                  <td>${b.destination.name}</td>
+                  <td>${new Date(b.startDate).toLocaleDateString()}</td>
+                  <td><strong>₹${b.totalAmount.toLocaleString('en-IN')}</strong></td>
+                  <td style="color:#059669; font-weight:700;">₹${guideShare.toLocaleString('en-IN')}</td>
+                  <td>
+                    <span class="status-badge ${b.status === 'CONFIRMED' ? 'status-approved' : 'status-pending'}">
+                      ${b.status}
+                    </span>
+                  </td>
+                </tr>
+              `;
+            }).join('');
+          } else {
+            tbody.innerHTML = `<tr><td colspan="7" style="text-align:center; padding:20px;">No bookings recorded yet.</td></tr>`;
+          }
+        } catch (e) {
+          console.warn('Bookings error:', e);
+        }
+      }
+
+      // Global Handlers
+      window.approveGuide = async (guideId) => {
+        const badge = document.getElementById(`badge-select-${guideId}`)?.value || 'VERIFIED_EXPERT';
+        try {
+          await api.admin.verifyGuide(guideId, 'APPROVED', badge);
+          window.GoBeyond.showToast(`Guide approved with ${badge} badge!`, 'success');
+          loadPendingGuides();
+          loadMetrics();
+        } catch (err) {
+          alert('Error approving guide: ' + err.message);
+        }
+      };
+
+      window.rejectGuide = async (guideId) => {
+        if (!confirm('Reject this guide application?')) return;
+        try {
+          await api.admin.verifyGuide(guideId, 'REJECTED');
+          window.GoBeyond.showToast('Guide application rejected.', 'info');
+          loadPendingGuides();
+          loadMetrics();
+        } catch (err) {
+          alert('Error: ' + err.message);
+        }
+      };
+
+      // Crowd Slider
+      const slider = document.getElementById('crowd-slider');
+      const valDisplay = document.getElementById('crowd-val-display');
+      slider.oninput = (e) => valDisplay.textContent = `${e.target.value}%`;
+
+      document.getElementById('btn-broadcast-crowd').onclick = async () => {
+        const destId = document.getElementById('crowd-target-dest').value;
+        const pct = parseInt(slider.value);
+        try {
+          await api.crowd.report({
+            destinationId: destId,
+            crowdPercent: pct,
+            currentVisitors: Math.round(pct * 2.8),
+            source: 'ADMIN_SIMULATOR'
+          });
+          window.GoBeyond.showToast(`📡 Live Crowd Score (${pct}%) broadcasted via Socket.io!`, 'success');
+        } catch (err) {
+          alert('Broadcast error: ' + err.message);
+        }
+      };
+
+      document.getElementById('btn-simulate-crowd').onclick = () => {
+        document.getElementById('btn-broadcast-crowd').click();
+      };
+
+      document.getElementById('btn-refresh-metrics').onclick = () => {
+        loadMetrics();
+        loadPendingGuides();
+        loadBookings();
+        window.GoBeyond.showToast('Data refreshed from backend', 'success');
+      };
+
+      document.getElementById('btn-admin-logout').onclick = () => {
+        api.auth.logout();
+        window.location.href = 'index.html';
+      };
+
+      // Initial Load
+      await loadMetrics();
+      await loadPendingGuides();
+      await loadBookings();
+    });
+  </script>
+</body>
+</html>

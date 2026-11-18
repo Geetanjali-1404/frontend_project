@@ -1,0 +1,168 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                  String         @id @default(cuid())
+  name                String
+  email               String         @unique
+  passwordHash        String?
+  role                String         @default("TRAVELER") // TRAVELER, GUIDE, ADMIN
+  avatar              String?
+  isVerified          Boolean        @default(false)
+  isBlocked           Boolean        @default(false)
+  verificationToken   String?
+  resetPasswordToken  String?
+  resetPasswordExpiry DateTime?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  guideProfile        GuideProfile?
+  bookings            Booking[]
+  reviews             Review[]
+  notifications       Notification[]
+}
+
+model GuideProfile {
+  id                 String        @id @default(cuid())
+  userId             String        @unique
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title              String?
+  bio                String
+  experienceYears    Int           @default(1)
+  city               String
+  state              String
+  languages          String        @default("Hindi, English")
+  niches             String        @default("Heritage, Culture")
+  hourlyRate         Float         @default(1500)
+  governmentIdUrl    String?
+  certificateUrls    String?
+  verificationStatus String        @default("PENDING") // PENDING, APPROVED, REJECTED
+  badgeTier          String        @default("BRONZE")  // BRONZE, SILVER, GOLD, VERIFIED_EXPERT
+  rating             Float         @default(5.0)
+  reviewCount        Int           @default(0)
+  completedTours     Int           @default(0)
+  responseRate       Float         @default(100.0)     // percentage, e.g. 98.5
+  guideScore         Float         @default(85.0)      // Rating*0.7 + Completed*0.2 + Response*0.1
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  destinations       Destination[]
+  bookings           Booking[]
+  reviews            Review[]
+}
+
+model Destination {
+  id                  String         @id @default(cuid())
+  slug                String         @unique
+  name                String
+  tagline             String
+  city                String
+  state               String
+  region              String
+  category            String
+  image               String
+  crowdLevel          String         @default("peaceful") // peaceful, moderate, high, very_high
+  crowdPercent        Int            @default(20)
+  crowdTrend          String?
+  historicalBackstory String
+  localCustoms        String
+  bestSeason          String
+  difficulty          String         @default("Easy")
+  duration            String
+  startingPrice       Float
+  mapCoordsX          Float          @default(50)
+  mapCoordsY          Float          @default(50)
+  highlights          String         @default("[]") // JSON string of array
+  routeFlight         String?        // JSON string
+  routeTrain          String?        // JSON string
+  routeRoad           String?        // JSON string
+  insiderTip          String?
+  createdAt           DateTime       @default(now())
+  updatedAt           DateTime       @updatedAt
+
+  guideId             String?
+  guide               GuideProfile?  @relation(fields: [guideId], references: [id])
+  bookings            Booking[]
+  reviews             Review[]
+  crowdRecords        CrowdData[]
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  bookingRef      String        @unique // e.g. GB-839201
+  userId          String
+  user            User          @relation(fields: [userId], references: [id])
+  destinationId   String
+  destination     Destination   @relation(fields: [destinationId], references: [id])
+  guideId         String?
+  guide           GuideProfile? @relation(fields: [guideId], references: [id])
+  startDate       DateTime
+  guests          Int           @default(1)
+  totalAmount     Float
+  status          String        @default("PENDING") // PENDING, CONFIRMED, COMPLETED, CANCELLED
+  paymentStatus   String        @default("PENDING") // PENDING, PAID, REFUNDED
+  specialRequests String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  payment         Payment?
+}
+
+model Payment {
+  id                 String   @id @default(cuid())
+  bookingId          String   @unique
+  booking            Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  transactionId      String   @unique
+  provider           String   @default("RAZORPAY")
+  amount             Float
+  guideShare         Float    // 85%
+  platformCommission Float    // 15%
+  status             String   @default("SUCCESS") // PENDING, SUCCESS, FAILED, REFUNDED
+  createdAt          DateTime @default(now())
+}
+
+model Review {
+  id             String        @id @default(cuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  destinationId  String
+  destination    Destination   @relation(fields: [destinationId], references: [id])
+  guideId        String?
+  guide          GuideProfile? @relation(fields: [guideId], references: [id])
+  rating         Int           @default(5)
+  comment        String
+  isVerifiedStay Boolean       @default(true)
+  guideReply     String?
+  pros           String?
+  cons           String?
+  createdAt      DateTime      @default(now())
+}
+
+model CrowdData {
+  id              String      @id @default(cuid())
+  destinationId   String
+  destination     Destination @relation(fields: [destinationId], references: [id])
+  currentVisitors Int         @default(0)
+  crowdPercent    Int         @default(20)
+  crowdLevel      String      @default("LOW") // LOW, MEDIUM, HIGH, VERY_HIGH
+  source          String      @default("GUIDE_REPORT") // CHECK_IN, GUIDE_REPORT, GPS, GOOGLE_PLACES
+  reportedBy      String?
+  createdAt       DateTime    @default(now())
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title     String
+  message   String
+  type      String   @default("INFO") // BOOKING, GUIDE, CROWD, PAYMENT, SYSTEM
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+}

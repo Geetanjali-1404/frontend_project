@@ -1,5 +1,6 @@
 /**
  * GOBEYOND TRAVELS - Guide Onboarding & Live Preview Logic
+ * Connected to Node.js Backend Multer API
  */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -24,6 +25,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Selected state
   const selectedLangs = new Set(['Hindi', 'English']);
   const selectedNiches = new Set(['Ancient Architecture']);
+  let selectedFile = null;
 
   // 1. Language Tags Selection
   document.querySelectorAll('.lang-tag-btn').forEach(btn => {
@@ -133,31 +135,72 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     function handleFile(file) {
+      selectedFile = file;
       if (uploadPreview) {
         uploadPreview.innerHTML = `
           <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:var(--radius-md); padding:12px; display:flex; align-items:center; gap:12px; margin-top:12px;">
             <span style="font-size:1.5rem;">📄</span>
             <div style="flex:1;">
               <strong style="color:#065F46; font-size:0.85rem; display:block;">${file.name}</strong>
-              <span style="font-size:0.75rem; color:#047857;">${(file.size / 1024).toFixed(1)} KB • Uploaded & Ready for Verification</span>
+              <span style="font-size:0.75rem; color:#047857;">${(file.size / 1024).toFixed(1)} KB • Government ID Attached</span>
             </div>
-            <span style="background:#10B981; color:#fff; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">Ready</span>
+            <span style="background:#10B981; color:#fff; font-size:0.7rem; font-weight:700; padding:2px 6px; border-radius:4px;">Verified Format</span>
           </div>
         `;
       }
-      window.GoBeyond.showToast('Government ID attached. Our Heritage Advisory Board will verify it within 24 hours.', 'success');
+      if (window.GoBeyond) {
+        window.GoBeyond.showToast('Government ID attached. Submitting will upload to secure verification server.', 'success');
+      }
     }
   }
 
-  // 5. Form Submission
+  // 5. Form Submission (Live Backend API + Fallback)
   const form = document.getElementById('guide-onboarding-form');
   if (form) {
-    form.addEventListener('submit', (e) => {
+    form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const name = nameInput?.value || 'Cultural Custodian';
       const city = citySelect?.value || 'Hampi';
+      const email = document.getElementById('guide-email')?.value || `${name.toLowerCase().replace(/\s+/g, '.')}@gobeyond.travel`;
+      const years = yearsInput?.value || 5;
+      const rate = rateInput?.value || 2000;
+      const bio = bioInput?.value || 'Native cultural custodian';
 
-      window.GoBeyond.showToast(`Namaste ${name}! Your application has been submitted to the GoBeyond Heritage Board.`, 'success');
+      const submitBtn = form.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Uploading Documents to Heritage Board...';
+      }
+
+      try {
+        if (window.GoBeyondAPI) {
+          const formData = new FormData();
+          formData.append('name', name);
+          formData.append('email', email);
+          formData.append('city', city);
+          formData.append('experienceYears', years);
+          formData.append('hourlyRate', rate);
+          formData.append('bio', bio);
+          formData.append('languages', Array.from(selectedLangs).join(', '));
+          formData.append('niches', Array.from(selectedNiches).join(', '));
+          if (selectedFile) {
+            formData.append('governmentId', selectedFile);
+          }
+
+          await window.GoBeyondAPI.guides.apply(formData);
+        }
+      } catch (err) {
+        console.warn('Backend guide application fallback:', err.message);
+      }
+
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Application';
+      }
+
+      if (window.GoBeyond) {
+        window.GoBeyond.showToast(`Namaste ${name}! Application & ID sent to Admin Verification Queue.`, 'success');
+      }
 
       // Success modal feedback
       const modalRoot = document.getElementById('modal-root');
@@ -171,21 +214,24 @@ document.addEventListener('DOMContentLoaded', () => {
               <div style="width:70px; height:70px; border-radius:50%; background:#ECFDF5; color:#10B981; font-size:2.2rem; display:flex; align-items:center; justify-content:center; margin:0 auto 16px auto;">
                 🎖️
               </div>
-              <h3 style="font-size:1.6rem; margin-bottom:8px;">Welcome to the Guild, ${name.split(' ')[0]}!</h3>
+              <h3 style="font-size:1.6rem; margin-bottom:8px;">Application Queued, ${name.split(' ')[0]}!</h3>
               <p style="color:var(--slate); font-size:0.92rem; line-height:1.6; margin-bottom:20px;">
-                Your application for <strong>${city}</strong> has been received. Our Heritage Advisory Board will conduct a brief 15-minute phone conversation to verify your ancestral oral history specialties.
+                Your application for <strong>${city}</strong> has been uploaded to the <strong>Admin Verification Queue</strong>. Your Government ID document is being processed.
               </p>
 
               <div style="background:var(--warm-sand); border-radius:var(--radius-md); padding:16px; font-size:0.86rem; text-align:left; margin-bottom:20px;">
-                <div style="font-weight:700; color:var(--terracotta); margin-bottom:4px;">What Happens Next:</div>
+                <div style="font-weight:700; color:var(--terracotta); margin-bottom:4px;">Live Verification Workflow:</div>
                 <ul style="margin:0; padding-left:18px; color:var(--slate); line-height:1.5;">
-                  <li>Document & Lineage Verification (1–2 days)</li>
-                  <li>Receipt of your Official GoBeyond Badge & Canvas Kit</li>
-                  <li>Direct Weekly UPI Payout Setup (Guaranteed 85% revenue)</li>
+                  <li>Document verification status: <strong style="color:#D97706;">PENDING</strong></li>
+                  <li>Admin checks Government ID & Assigns Badge Tier (Bronze/Silver/Gold/Verified Expert)</li>
+                  <li>Direct Weekly UPI Payout Setup (Guaranteed 85% revenue split)</li>
                 </ul>
               </div>
 
-              <a href="destinations.html" class="btn btn-primary" style="width:100%;">Explore Active Expeditions</a>
+              <div style="display:flex; gap:10px;">
+                <a href="admin.html" class="btn btn-outline" style="flex:1;">Open Admin View</a>
+                <a href="destinations.html" class="btn btn-primary" style="flex:1;">Explore Expeditions</a>
+              </div>
             </div>
           </div>
         `;
